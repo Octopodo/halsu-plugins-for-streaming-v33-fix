@@ -38,11 +38,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "Building the OBS libobs target failed with exit code $LASTEXITCODE."
           }
-          $libobs = Get-ChildItem -Path .\obs-build -Recurse -Filter libobs.lib | Select-Object -First 1 -ExpandProperty FullName
+          $libobs = Get-ChildItem -Path .\obs-build -Recurse -Filter obs.lib | Select-Object -First 1 -ExpandProperty FullName
           if (-not $libobs) {
-            throw "libobs.lib not found under obs-build."
+            throw "obs.lib import library not found under obs-build."
           }
-          $obsInclude = (Resolve-Path .\obs-studio\libobs).Path
+          $obsInclude = @(
+            (Resolve-Path .\obs-studio\libobs).Path
+            (Resolve-Path .\obs-build\config).Path
+          ) -join ";"
           "LIBOBS_LIB=$libobs" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "LIBOBS_INCLUDE_DIR=$obsInclude" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
