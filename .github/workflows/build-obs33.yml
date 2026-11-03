@@ -1,0 +1,78 @@
+name: Build OBS 33 plugins
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  build-obs33:
+    runs-on: windows-2022
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout plugin sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout OBS Studio 33.0.1 source
+        uses: actions/checkout@v4
+        with:
+          repository: obsproject/obs-studio
+          ref: 33.0.1
+          path: obs-studio
+
+      - name: Configure and build libobs target only
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          cmake -S .\obs-studio -B .\obs-build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DENABLE_BROWSER=OFF -DENABLE_FRONTEND=OFF
+          cmake --build .\obs-build --config Release --target libobs
+          $libobs = Get-ChildItem -Path .\obs-build -Recurse -Filter libobs.lib | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $libobs) {
+            throw "libobs.lib not found under obs-build."
+          }
+          $obsInclude = (Resolve-Path .\obs-studio\libobs).Path
+          "LIBOBS_LIB=$libobs" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "LIBOBS_INCLUDE_DIR=$obsInclude" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Build Halsu_HybridKeyer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          cmake -S .\Halsu_HybridKeyer -B .\build\Halsu_HybridKeyer -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DLIBOBS_INCLUDE_DIR="$env:LIBOBS_INCLUDE_DIR" -DLIBOBS_LIB="$env:LIBOBS_LIB"
+          cmake --build .\build\Halsu_HybridKeyer --config Release
+
+      - name: Build Halsu_Relightwrap
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          cmake -S .\Halsu_Relightwrap -B .\build\Halsu_Relightwrap -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DLIBOBS_INCLUDE_DIR="$env:LIBOBS_INCLUDE_DIR" -DLIBOBS_LIB="$env:LIBOBS_LIB"
+          cmake --build .\build\Halsu_Relightwrap --config Release
+
+      - name: Package OBS 33 plugin files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $package = Join-Path $PWD "artifact"
+          New-Item -ItemType Directory -Force -Path "${package}\obs-plugins\64bit" | Out-Null
+          New-Item -ItemType Directory -Force -Path "${package}\data\obs-plugins\Halsu_HybridKeyer" | Out-Null
+          New-Item -ItemType Directory -Force -Path "${package}\data\obs-plugins\Halsu_Relightwrap" | Out-Null
+
+          Copy-Item ".\build\Halsu_HybridKeyer\Release\Halsu_HybridKeyer.dll" "${package}\obs-plugins\64bit\"
+          Copy-Item ".\build\Halsu_Relightwrap\Release\Halsu_Relightwrap.dll" "${package}\obs-plugins\64bit\"
+          Copy-Item ".\Halsu_HybridKeyer\Halsu_HybridKeyer.effect" "${package}\data\obs-plugins\Halsu_HybridKeyer\"
+          Copy-Item ".\Halsu_Relightwrap\Halsu_Relightwrap.effect" "${package}\data\obs-plugins\Halsu_Relightwrap\"
+
+          Get-ChildItem -Recurse $package | Select-Object FullName
+
+      - name: Publish artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: halsu-plugins-obs33
+          path: artifact/**
+          if-no-files-found: error

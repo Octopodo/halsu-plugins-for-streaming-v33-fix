@@ -8,6 +8,22 @@ extern "C" {
 }
 #include <sys/stat.h>
 
+#if LIBOBS_API_MAJOR_VER >= 33
+typedef gs_image_file_ex_t gs_image_file_t;
+static inline void gs_image_file_init(gs_image_file_t *image, const char *file)
+{
+    gs_image_file_ex_init(image, file, GS_IMAGE_ALPHA_STRAIGHT);
+}
+static inline void gs_image_file_free(gs_image_file_t *image)
+{
+    gs_image_file_ex_free(image);
+}
+static inline void gs_image_file_init_texture(gs_image_file_t *image)
+{
+    gs_image_file_ex_init_texture(image);
+}
+#endif
+
 OBS_DECLARE_MODULE()
 
 /*
