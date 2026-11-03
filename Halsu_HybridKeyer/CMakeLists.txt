@@ -27,4 +27,4 @@ if(EXTRA_INCLUDES)
     target_include_directories(Halsu_HybridKeyer PRIVATE ${EXTRA_INCLUDES})
 endif()
 
-file(COPY Halsu_HybridKeyer.effect DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY data/obs-plugins/Halsu_HybridKeyer/Halsu_HybridKeyer.effect DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

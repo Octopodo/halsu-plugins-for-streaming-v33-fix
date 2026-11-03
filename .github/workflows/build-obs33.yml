@@ -54,14 +54,26 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           cmake -S .\Halsu_HybridKeyer -B .\build\Halsu_HybridKeyer -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DLIBOBS_INCLUDE_DIR="$env:LIBOBS_INCLUDE_DIR" -DLIBOBS_LIB="$env:LIBOBS_LIB"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Halsu_HybridKeyer CMake configuration failed with exit code $LASTEXITCODE."
+          }
           cmake --build .\build\Halsu_HybridKeyer --config Release
+          if ($LASTEXITCODE -ne 0) {
+            throw "Halsu_HybridKeyer build failed with exit code $LASTEXITCODE."
+          }
 
       - name: Build Halsu_Relightwrap
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           cmake -S .\Halsu_Relightwrap -B .\build\Halsu_Relightwrap -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DLIBOBS_INCLUDE_DIR="$env:LIBOBS_INCLUDE_DIR" -DLIBOBS_LIB="$env:LIBOBS_LIB"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Halsu_Relightwrap CMake configuration failed with exit code $LASTEXITCODE."
+          }
           cmake --build .\build\Halsu_Relightwrap --config Release
+          if ($LASTEXITCODE -ne 0) {
+            throw "Halsu_Relightwrap build failed with exit code $LASTEXITCODE."
+          }
 
       - name: Package OBS 33 plugin files
         shell: pwsh
@@ -74,7 +86,7 @@ jobs:
 
           Copy-Item ".\build\Halsu_HybridKeyer\Release\Halsu_HybridKeyer.dll" "${package}\obs-plugins\64bit\"
           Copy-Item ".\build\Halsu_Relightwrap\Release\Halsu_Relightwrap.dll" "${package}\obs-plugins\64bit\"
-          Copy-Item ".\Halsu_HybridKeyer\Halsu_HybridKeyer.effect" "${package}\data\obs-plugins\Halsu_HybridKeyer\"
+          Copy-Item ".\Halsu_HybridKeyer\data\obs-plugins\Halsu_HybridKeyer\Halsu_HybridKeyer.effect" "${package}\data\obs-plugins\Halsu_HybridKeyer\"
           Copy-Item ".\Halsu_Relightwrap\Halsu_Relightwrap.effect" "${package}\data\obs-plugins\Halsu_Relightwrap\"
 
           Get-ChildItem -Recurse $package | Select-Object FullName
